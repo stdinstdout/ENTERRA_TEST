@@ -3,21 +3,22 @@ import aiohttp
 
 from .weather.weather_request import WeatherRequest
 from .weather.weather import Weather
+from .schemas import GetCity
 
 
-def get_need_field(weather: Weather, params):
-    res = {}
-    res["city"] = weather.name
+def get_city_include_fields(weather: Weather, params):
+    res = GetCity(city=weather.name) # type: ignore
     if 'temperature' in params:
-        res['temperature'] = weather.main.temp
+        res.temperature = weather.main.temp
     if 'feels' in params:
-        res['feels'] = weather.main.feels_like
+        res.feels = weather.main.feels_like
     if 'wind' in params:
-        res['wind'] = weather.wind
+        res.wind = weather.wind.dict()# type: ignore
     if 'visibility' in params:
-        res['visibility'] = weather.visibility
+        res.visibility = weather.visibility
     if 'humidity' in params:
-        res['humidity'] = weather.main.humidity
+        res.humidity = weather.main.humidity
+    
     return res
 
 

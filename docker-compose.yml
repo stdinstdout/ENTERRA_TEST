@@ -35,6 +35,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=postgres
       - POSTGRES_HOST=fastapi_db
+      - REDIS_OM_URL=redis://redis
     depends_on:
       - db
       - redis

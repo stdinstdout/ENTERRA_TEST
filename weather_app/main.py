@@ -1,14 +1,16 @@
-from fastapi_redis_cache import FastApiRedisCache, cache_one_hour
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI
 
-from sqlalchemy.orm import Session
 from functools import lru_cache
 
-from .extra_funcs_for_main import get_need_field, task
-from .schemas import CityWeather, FewCityWeather
+from .extra_funcs_for_main import get_city_include_fields, task
+from .schemas import CityWeather, CitiesWeather, GetCity
 from .weather import WeatherRequest
 from .config import Settings
+
+
+from fastapi_cache import caches, close_caches
+from fastapi_cache.backends.redis import CACHE_KEY, RedisCacheBackend
 
 
 app = FastAPI()
@@ -20,34 +22,61 @@ app.add_middleware(
 def get_settings():
     return Settings()
 
+def redis_cache():
+    return caches.get(CACHE_KEY)
 
-@app.on_event("startup")
-def startup():
-    redis_cache = FastApiRedisCache()
-    redis_cache.init(
-        host_url=get_settings().LOCAL_REDIS_URL,
-        prefix="myapi-cache",
-        response_header="X-MyAPI-Cache",
-        ignore_arg_types=[Request, Response, Session]
-    )
-    
 
-@app.get('/one_city_weather')
-@cache_one_hour()
-def city_weather(city_weather: CityWeather):
+@app.on_event('startup')
+async def on_startup() -> None:
+    rc = RedisCacheBackend(get_settings().LOCAL_REDIS_URL)
+    caches.set(CACHE_KEY, rc)
+
+
+@app.on_event('shutdown')
+async def on_shutdown() -> None:
+    await close_caches()
+
+
+@app.get('/city_weather')
+async def city_weather(city_weather: CityWeather, cache: RedisCacheBackend = Depends(redis_cache)):
     city = city_weather.city
     params = set(city_weather.parameters.split(' '))
+
+    in_cache = await cache.get(city)
+    if in_cache:
+        return GetCity.parse_raw(in_cache)
+
     wr = WeatherRequest(city)
-    return get_need_field(wr.get_weather(), params)
+    weather_city = get_city_include_fields(wr.get_weather(), params)
+
+    await cache.set(key=city, value=weather_city.json())
+    await cache.expire(key=city, ttl=get_settings().STORE_CACHE_TIME)
+
+    return weather_city
     
 
-@app.get('/many_city_weather')
-@cache_one_hour()
-async def fewcity_weather(few_city_weather: FewCityWeather):
-    cities = few_city_weather.cities
-    params = set(few_city_weather.parameters.split(' '))
-    res = await task(cities)
-    return [get_need_field(r, params) for r in res]
+@app.get('/cities_weather')
+async def cities_weather(cities_weather: CitiesWeather, cache: RedisCacheBackend = Depends(redis_cache)):
+    params = set(cities_weather.parameters.split(' '))
+    cities = cities_weather.cities
+    cached_cities = []
+    not_cached_cities = []
+
+    for city in cities:
+        in_cache = await cache.get(city)
+        if in_cache:
+            cached_cities.append(GetCity.parse_raw(in_cache))
+        else:
+            not_cached_cities.append(city)
+
+    got_cities = await task(not_cached_cities)
+    for city in got_cities:
+        gc = get_city_include_fields(city, params) 
+        await cache.set(key=gc.city, value=gc.json())
+        await cache.expire(key=gc.city, ttl=get_settings().STORE_CACHE_TIME)
+        cached_cities += gc
+
+    return cached_cities
 
     
 

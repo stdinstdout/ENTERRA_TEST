@@ -3,8 +3,8 @@ from fastapi import HTTPException
 from functools import lru_cache
 import requests
 
-from .weather import Weather
 from weather_app.config import Settings
+from .weather import Weather
 
 @lru_cache()
 def get_settings():
@@ -17,7 +17,7 @@ class WeatherRequest:
                 units='metric',
                 lang='ru',
                 url='https://api.openweathermap.org/data/2.5/weather/'):
-        self.appid = get_settings().api_key
+        self.appid = get_settings().API_KEY
         self.url = url
         self.city = city
         self.units = units
@@ -46,6 +46,7 @@ class WeatherRequest:
                 return Weather.parse_raw(await response.text())
             except ValidationError as e:
                 raise HTTPException(status_code=402,detail="Город не найден или полученные данные не валидны")
+
 
 
     def get_weather(self):
