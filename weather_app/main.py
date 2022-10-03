@@ -1,9 +1,12 @@
+from typing import List
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi import Depends, FastAPI
 
 from functools import lru_cache
 
-from .extra_funcs_for_main import get_city_include_fields, task
+from .weather.weather import Weather
+
+from .extra_funcs_for_main import async_request_city_weather, get_city_include_fields
 from .schemas import CityWeather, CitiesWeather, GetCity
 from .weather import WeatherRequest
 from .config import Settings
@@ -40,7 +43,7 @@ async def on_shutdown() -> None:
 @app.get('/city_weather')
 async def city_weather(city_weather: CityWeather, cache: RedisCacheBackend = Depends(redis_cache)):
     city = city_weather.city
-    params = set(city_weather.parameters.split(' '))
+    params = city_weather.parameters.split(' ')
 
     in_cache = await cache.get(city)
     if in_cache:
@@ -49,34 +52,38 @@ async def city_weather(city_weather: CityWeather, cache: RedisCacheBackend = Dep
     wr = WeatherRequest(city)
     weather_city = get_city_include_fields(wr.get_weather(), params)
 
-    await cache.set(key=city, value=weather_city.json())
-    await cache.expire(key=city, ttl=get_settings().STORE_CACHE_TIME)
+    await cache.set(key=city, value=weather_city.json(), expire=get_settings().STORE_CACHE_TIME)
 
     return weather_city
     
 
 @app.get('/cities_weather')
 async def cities_weather(cities_weather: CitiesWeather, cache: RedisCacheBackend = Depends(redis_cache)):
-    params = set(cities_weather.parameters.split(' '))
+    params = cities_weather.parameters.split(' ')
     cities = cities_weather.cities
-    cached_cities = []
-    not_cached_cities = []
+    cached_cities: List[GetCity] = []
+    cities_for_requesting: List[str] = []
 
     for city in cities:
-        in_cache = await cache.get(city)
-        if in_cache:
-            cached_cities.append(GetCity.parse_raw(in_cache))
+        cached_city = await cache.get(city)
+        if cached_city:
+            cached_cities.append(GetCity.parse_raw(cached_city))
         else:
-            not_cached_cities.append(city)
+            cities_for_requesting.append(city)
 
-    got_cities = await task(not_cached_cities)
+    got_cities = await async_request_city_weather(cities_for_requesting)
     for city in got_cities:
-        gc = get_city_include_fields(city, params) 
-        await cache.set(key=gc.city, value=gc.json())
-        await cache.expire(key=gc.city, ttl=get_settings().STORE_CACHE_TIME)
-        cached_cities += gc
+        gc = get_city_include_fields(city, params)
+        await cache.set(key=gc.city, value=gc.json(), expire=get_settings().STORE_CACHE_TIME)
+        cached_cities.append(gc)
 
     return cached_cities
+
+# На случай, если в кэш попадет ерунда
+@app.get('/fluch_cache')
+async def flush_cache(cache: RedisCacheBackend = Depends(redis_cache)):
+    await cache.flush()
+    return {"message": "flushed"}
 
     
 

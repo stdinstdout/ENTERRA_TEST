@@ -7,7 +7,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-API_BASEURL = "http://localhost:8080"
+API_BASEURL = "http://0.0.0.0:80"
 
 def request(path, method="GET", data=None, json_response=False):
     try:

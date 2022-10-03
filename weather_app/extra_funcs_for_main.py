@@ -1,9 +1,18 @@
+from fastapi_cache.backends.redis import RedisCacheBackend
+
 import asyncio
 import aiohttp
+from functools import lru_cache
 
 from .weather.weather_request import WeatherRequest
 from .weather.weather import Weather
+from .config import Settings
 from .schemas import GetCity
+
+
+@lru_cache()
+def get_settings():
+    return Settings()
 
 
 def get_city_include_fields(weather: Weather, params):
@@ -22,7 +31,7 @@ def get_city_include_fields(weather: Weather, params):
     return res
 
 
-async def task(cities):
+async def async_request_city_weather(cities):
     async with aiohttp.ClientSession() as session:
         tasks = [WeatherRequest(city).async_request(session) for city in cities]
         result = await asyncio.gather(*tasks)

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Set, Union
+from typing import List, Union
 
 from .weather.weather import Wind
 
@@ -8,9 +8,8 @@ class CityWeather(BaseModel):
     parameters: str
 
 class CitiesWeather(BaseModel):
-    cities: Set[str]
+    cities: List[str]
     parameters: str
-
 
 class GetCity(BaseModel):
     city: str
