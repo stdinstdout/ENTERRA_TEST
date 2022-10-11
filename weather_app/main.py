@@ -79,7 +79,7 @@ async def cities_weather(cities_weather: CitiesWeather, cache: RedisCacheBackend
 
 
 # На случай, если в кэш попадет ерунда
-@app.get('/fluch_cache')
+@app.get('/flush_cache')
 async def flush_cache(cache: RedisCacheBackend = Depends(redis_cache)):
     await cache.flush()
     return {"message": "flushed"}
