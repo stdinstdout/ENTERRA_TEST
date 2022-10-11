@@ -1,5 +1,3 @@
-from fastapi_cache.backends.redis import RedisCacheBackend
-
 import asyncio
 import aiohttp
 from functools import lru_cache
