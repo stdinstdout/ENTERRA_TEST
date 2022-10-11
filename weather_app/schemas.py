@@ -1,7 +1,6 @@
-from pydantic import BaseModel
 from typing import List, Union
 
-from .weather.weather import Wind
+from pydantic import BaseModel
 
 
 class CityWeather(BaseModel):
