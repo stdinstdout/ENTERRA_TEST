@@ -4,26 +4,24 @@ from fastapi import Depends, FastAPI
 
 from functools import lru_cache
 
-from .weather.weather import Weather
-
 from .extra_funcs_for_main import async_request_city_weather, get_city_include_fields
 from .schemas import CityWeather, CitiesWeather, GetCity
 from .weather import WeatherRequest
 from .config import Settings
 
-
 from fastapi_cache import caches, close_caches
 from fastapi_cache.backends.redis import CACHE_KEY, RedisCacheBackend
-
 
 app = FastAPI()
 app.add_middleware(
     TrustedHostMiddleware, allowed_hosts=["*"]
 )
 
+
 @lru_cache()
 def get_settings():
     return Settings()
+
 
 def redis_cache():
     return caches.get(CACHE_KEY)
@@ -55,7 +53,7 @@ async def city_weather(city_weather: CityWeather, cache: RedisCacheBackend = Dep
     await cache.set(key=city, value=weather_city.json(), expire=get_settings().STORE_CACHE_TIME)
 
     return weather_city
-    
+
 
 @app.get('/cities_weather')
 async def cities_weather(cities_weather: CitiesWeather, cache: RedisCacheBackend = Depends(redis_cache)):
@@ -79,12 +77,9 @@ async def cities_weather(cities_weather: CitiesWeather, cache: RedisCacheBackend
 
     return cached_cities
 
+
 # На случай, если в кэш попадет ерунда
-@app.get('/fluch_cache')
+@app.get('/flush_cache')
 async def flush_cache(cache: RedisCacheBackend = Depends(redis_cache)):
     await cache.flush()
     return {"message": "flushed"}
-
-    
-
-    

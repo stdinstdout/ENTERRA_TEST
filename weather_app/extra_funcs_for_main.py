@@ -1,5 +1,3 @@
-from fastapi_cache.backends.redis import RedisCacheBackend
-
 import asyncio
 import aiohttp
 from functools import lru_cache
@@ -16,18 +14,18 @@ def get_settings():
 
 
 def get_city_include_fields(weather: Weather, params):
-    res = GetCity(city=weather.name) # type: ignore
+    res = GetCity(city=weather.name)  # type: ignore
     if 'temperature' in params:
         res.temperature = weather.main.temp
     if 'feels' in params:
         res.feels = weather.main.feels_like
     if 'wind' in params:
-        res.wind = weather.wind.dict()# type: ignore
+        res.wind = weather.wind.dict()  # type: ignore
     if 'visibility' in params:
         res.visibility = weather.visibility
     if 'humidity' in params:
         res.humidity = weather.main.humidity
-    
+
     return res
 
 

@@ -1,12 +1,12 @@
 version: "3.9"
-   
+
 services:
   redis:
     image: redis
     restart: always
     container_name: redis
-    ports: 
-     - 6379:6379
+    ports:
+      - 6379:6379
 
   db:
     image: postgres
@@ -21,13 +21,13 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=postgres
       - POSTGRES_HOST=fastapi_db
-      
+
   web:
     build: .
     command: uvicorn weather_app.main:app --host 0.0.0.0 --port 80
     restart: always
-    ports: 
-     - 80:80
+    ports:
+      - 80:80
     image: web:code
     container_name: fastapi_cnt
     environment:

@@ -9,6 +9,7 @@ import urllib.request
 
 API_BASEURL = "http://0.0.0.0:80"
 
+
 def request(path, method="GET", data=None, json_response=False):
     try:
         params = {
@@ -46,7 +47,6 @@ many_city_request = {
 
 
 def test_one_city():
-
     status, _ = request("/city_weather", method="GET", data=one_city_request)
 
     assert status == 200, f"Expected HTTP status code 200, got {status}"
@@ -55,25 +55,26 @@ def test_one_city():
 
 
 def test_many_city():
-
     status, _ = request("/cities_weather", method="GET", data=many_city_request)
 
     assert status == 200, f"Expected HTTP status code 200, got {status}"
 
     print("Test many city weather passed.")
 
+
 one_not_found_city_request = {
     "city": "dfgdf",
     "parameters": "temperature feels wind visibility humidity"
 }
 
-def test_not_found_city():
 
+def test_not_found_city():
     status, _ = request("/city_weather", method="GET", data=one_not_found_city_request)
 
     assert status == 404, f"Expected HTTP status code 404, got {status}"
 
     print("Test not found city weather passed.")
+
 
 def test_all():
     test_one_city()
